@@ -66,12 +66,12 @@ class Url_Producer:
             tag, ip = await self.proxy_mq.get('proxy_queue')
             try:
                 if data:
-                    async with self.session.post(url, data=data, headers=headers,proxy=ip.decode('utf-8'),timeout=3) as response:
+                    async with self.session.post(url, data=data, headers=headers,proxy=ip.decode('utf-8')) as response:
                         # l.info("proxy:{} is valid".format(ip))
                         await self.proxy_mq.put('proxy_queue',ip)
                         return await response.json()
                 if params:
-                    async with self.session.get(url, params=params, headers=headers,proxy=ip.decode('utf-8'),timeout=3) as response:
+                    async with self.session.get(url, params=params, headers=headers,proxy=ip.decode('utf-8')) as response:
                         # l.info("proxy:{} is valid".format(ip))
                         await self.proxy_mq.put('proxy_queue',ip)
                         return await response.json()

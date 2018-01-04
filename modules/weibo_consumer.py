@@ -56,18 +56,18 @@ class Url_Consumer:
             tag, ip = await self.proxy_mq.get('proxy_queue')
             try:
                 if data:
-                    async with self.session.post(url, data=data, headers=headers,proxy=ip.decode('utf-8'),timeout=3) as response:
+                    async with self.session.post(url, data=data, headers=headers,proxy=ip.decode('utf-8')) as response:
                         # logging.info("proxy:{} is valid".format(ip))
                         await self.proxy_mq.put('proxy_queue',ip)
                         return await response.json()
                 elif params:
-                    async with self.session.get(url, params=params, headers=headers,proxy=ip.decode('utf-8'),timeout=3) as response:
+                    async with self.session.get(url, params=params, headers=headers,proxy=ip.decode('utf-8')) as response:
                         # logging.info("proxy:{} is valid".format(ip))
                         await self.proxy_mq.put('proxy_queue',ip)
 
                         return await response.json()
                 else:
-                    async with self.session.get(url,headers=headers,proxy=ip.decode('utf-8'),timeout=3) as response:
+                    async with self.session.get(url,headers=headers,proxy=ip.decode('utf-8')) as response:
                         # logging.info("proxy:{} is valid".format(ip))
                         await self.proxy_mq.put('proxy_queue',ip)
 
