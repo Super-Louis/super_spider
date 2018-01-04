@@ -42,7 +42,7 @@ class CrawlerProxy():
                     pass
             else:
                 l.info("Proxies are enough. Get proxy directly...")
-                await asyncio.sleep(2)
+                await asyncio.sleep(5)
                 pass
 
     async def queue_size(self):
