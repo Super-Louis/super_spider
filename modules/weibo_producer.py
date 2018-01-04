@@ -11,6 +11,7 @@ from spider_filter import BloomFilter
 from logging.handlers import TimedRotatingFileHandler
 import multiprocessing
 from spider_queue import *
+from db_config import DB
 
 basic_info_url = 'https://m.weibo.cn/api/container/getIndex'
 
@@ -29,7 +30,7 @@ l = logging.getLogger('run')
 class Url_Producer:
     def __init__(self):
         self._session = None
-        self.client = motor.motor_asyncio.AsyncIOMotorClient('mongodb://liuchao:liuchao@39.106.110.169:27017')
+        self.client = motor.motor_asyncio.AsyncIOMotorClient(f"mongodb://{DB['mongo']['user']}:{DB['mongo']['password']}@{DB['mongo']['host']}:{DB['mongo']['port']}")
         self.collection = self.client.weibo.user_detail_info
         self.bf = BloomFilter()
 
@@ -62,18 +63,15 @@ class Url_Producer:
                     continue
         retry = 0
         while True:
-            retry += 1
-            if retry == 31:
-                return ''
             tag, ip = await self.proxy_mq.get('proxy_queue')
             try:
                 if data:
-                    async with self.session.post(url, data=data, headers=headers,proxy=ip.decode('utf-8')) as response:
+                    async with self.session.post(url, data=data, headers=headers,proxy=ip.decode('utf-8'),timeout=3) as response:
                         # l.info("proxy:{} is valid".format(ip))
                         await self.proxy_mq.put('proxy_queue',ip)
                         return await response.json()
                 if params:
-                    async with self.session.get(url, params=params, headers=headers,proxy=ip.decode('utf-8')) as response:
+                    async with self.session.get(url, params=params, headers=headers,proxy=ip.decode('utf-8'),timeout=3) as response:
                         # l.info("proxy:{} is valid".format(ip))
                         await self.proxy_mq.put('proxy_queue',ip)
                         return await response.json()
@@ -85,54 +83,55 @@ class Url_Producer:
 
     async def crawler_entry(self):#初始从Task_Gernator中随机选取一个种子用户
         id = await self.redis.spop('user_id')
-        l.info("get id:{}".format(id))
-        info_params = {
-                'type':'uid',
-                'value':id,
+        if id:
+            l.info("get id:{}".format(id))
+            info_params = {
+                    'type':'uid',
+                    'value':id,
+                    }
+            basic_res = await self.request_page(url=basic_info_url,params=info_params,headers=headers,proxy=True)
+            # print(basic_res)
+
+            try:
+                l.info("process inserting id:{} into mongodb".format(id))
+                await self.collection.insert_one(basic_res['data']['userInfo'])
+                l.info("inserted id:{} into mongodb".format(id))
+            # TODO : save basic_res to mongo_db basic infomation ,add field:refer
+                info_url = basic_res['data']['follow_scheme']
+                follow_count = basic_res['data']['userInfo']['follow_count']
+            except Exception as e:
+                l.info(e)
+                pass
+            else:
+                containerid_follow = re.findall(r'containerid=(.+?)&',info_url)[0].replace('_followersrecomm_','_followers_')
+                luicode = re.findall(r'luicode=(.+?)&',info_url)[0]
+                lfid = re.findall(r'lfid=(\d+)',info_url)[0]
+                containerid_detail = basic_res['data']['tabsInfo']['tabs'][0]['containerid'] + '_-_INFO'
+                detail_params = {
+                    'containerid':containerid_detail,
+                    'title':'%E5%9F%BA%E6%9C%AC%E4%BF%A1%E6%81%AF',
+                    'luicode':luicode,
+                    'lfid':lfid,
+                    'type':'uid',
+                    'value':id
                 }
-        basic_res = await self.request_page(url=basic_info_url,params=info_params,headers=headers,proxy=True)
-        # print(basic_res)
+                detail_url = basic_info_url + "?" + urllib.parse.urlencode(detail_params)
+                print(detail_url)
+                await self.mq.put('info_url',detail_url)
 
-        try:
-            l.info("process inserting id:{} into mongodb".format(id))
-            await self.collection.insert_one(basic_res['data']['userInfo'])
-            l.info("inserted id:{} into mongodb".format(id))
-        # TODO : save basic_res to mongo_db basic infomation ,add field:refer
-            info_url = basic_res['data']['follow_scheme']
-            follow_count = basic_res['data']['userInfo']['follow_count']
-        except Exception as e:
-            l.info(e)
-            pass
-        else:
-            containerid_follow = re.findall(r'containerid=(.+?)&',info_url)[0].replace('_followersrecomm_','_followers_')
-            luicode = re.findall(r'luicode=(.+?)&',info_url)[0]
-            lfid = re.findall(r'lfid=(\d+)',info_url)[0]
-            containerid_detail = basic_res['data']['tabsInfo']['tabs'][0]['containerid'] + '_-_INFO'
-            detail_params = {
-                'containerid':containerid_detail,
-                'title':'%E5%9F%BA%E6%9C%AC%E4%BF%A1%E6%81%AF',
-                'luicode':luicode,
-                'lfid':lfid,
-                'type':'uid',
-                'value':id
-            }
-            detail_url = basic_info_url + "?" + urllib.parse.urlencode(detail_params)
-            print(detail_url)
-            await self.mq.put('info_url',detail_url)
-
-            follow_params = {
-                'containerid': containerid_follow,
-                'luicode': luicode,
-                'lfid': lfid,
-                'type': 'uid',
-                'value': id
-            }
-            # await asyncio.sleep(random.random())
-            max_page = int(int(follow_count) / 20) + 1#最多显示10页内容
-            if max_page > 10:
-                max_page = 10
-            for page in range(1,max_page):
-                await self.get_user_list(params=follow_params,page=page)
+                follow_params = {
+                    'containerid': containerid_follow,
+                    'luicode': luicode,
+                    'lfid': lfid,
+                    'type': 'uid',
+                    'value': id
+                }
+                # await asyncio.sleep(random.random())
+                max_page = int(int(follow_count) / 20) + 1#最多显示10页内容
+                if max_page > 10:
+                    max_page = 10
+                for page in range(1,max_page):
+                    await self.get_user_list(params=follow_params,page=page)
 
     async def get_user_list(self,params,page):#不能同时搜索多个page!
 
@@ -152,7 +151,7 @@ class Url_Producer:
                 l.info("process check id: {}".format(id))
                 redis_len = await self.redis.scard('user_id')
                 print("length of id is:{}".format(redis_len))
-                if redis_len <= 20000:
+                if redis_len <= 100000:
                     # todo:去重
                     if await self.bf.isContains(id):  # 判断字符串是否存在
                         l.info('{} exists!'.format(id))
@@ -164,7 +163,7 @@ class Url_Producer:
     async def tasks(self):
         self.mq = await AsyncMqSession()
         self.proxy_mq = await AsyncMqSession()
-        self.redis = await aioredis.create_redis(('39.106.110.169', 6379),password='liuchao',encoding='utf-8')
+        self.redis = await aioredis.create_redis((DB['redis']['host'], DB['redis']['port']),password=DB['redis']['password'],encoding='utf-8')
         while True:
 
             tasks = [self.crawler_entry() for _ in range(1000)]

@@ -9,6 +9,8 @@ import time
 import json
 from spider_queue import *
 import multiprocessing
+from db_config import DB
+
 
 
 basic_info_url = 'https://m.weibo.cn/api/container/getIndex'
@@ -27,7 +29,7 @@ l = logging.getLogger('run')
 class Url_Consumer:
     def __init__(self):
         self._session = None
-        self.client = motor.motor_asyncio.AsyncIOMotorClient('mongodb://liuchao:liuchao@39.106.110.169:27017')
+        self.client = motor.motor_asyncio.AsyncIOMotorClient(f"mongodb://{DB['mongo']['user']}:{DB['mongo']['password']}@{DB['mongo']['host']}:{DB['mongo']['port']}")
         self.collection = self.client.weibo.user_detail_info
 
     def __enter__(self):
@@ -51,29 +53,23 @@ class Url_Consumer:
     async def request_page(self,url,data=None,params=None,headers=None,proxy=False):
         retry = 0
         while True:
-            retry += 1
-            if retry == 31:
-                return ''
             tag, ip = await self.proxy_mq.get('proxy_queue')
             try:
                 if data:
                     async with self.session.post(url, data=data, headers=headers,proxy=ip.decode('utf-8'),timeout=3) as response:
                         # logging.info("proxy:{} is valid".format(ip))
                         await self.proxy_mq.put('proxy_queue',ip)
-                        print(await response.text())
                         return await response.json()
                 elif params:
                     async with self.session.get(url, params=params, headers=headers,proxy=ip.decode('utf-8'),timeout=3) as response:
                         # logging.info("proxy:{} is valid".format(ip))
                         await self.proxy_mq.put('proxy_queue',ip)
-                        print(await response.text())
 
                         return await response.json()
                 else:
                     async with self.session.get(url,headers=headers,proxy=ip.decode('utf-8'),timeout=3) as response:
                         # logging.info("proxy:{} is valid".format(ip))
                         await self.proxy_mq.put('proxy_queue',ip)
-                        print(await response.text())
 
                         return await response.json()
             except Exception as e:

@@ -5,14 +5,7 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import aioredis
 import pika
-
-try:
-    from online_config import MQ
-except:
-    MQ = {
-        'host': "39.106.110.169",
-        'port': 5672,
-    }
+from db_config import DB
 
 
 class MqSession(object):
@@ -25,9 +18,9 @@ class MqSession(object):
         while tries < max_tries:
             tries += 1
             try:
-                self.credentials = pika.PlainCredentials(username='liuchao', password='liuchao')
+                self.credentials = pika.PlainCredentials(username=DB['rabbit']['user'], password=DB['rabbit']['password'])
                 self.connection = pika.BlockingConnection(
-                    pika.ConnectionParameters(**MQ, credentials=self.credentials, socket_timeout=20, heartbeat_interval=0))
+                    pika.ConnectionParameters(host=DB['rabbit']['host'],port=DB['rabbit']['port'],credentials=self.credentials, socket_timeout=20, heartbeat_interval=0))
                 self.channel = self.connection.channel()
                 self.channel.basic_qos(prefetch_count=1)
                 return self.channel
@@ -122,7 +115,7 @@ class AsyncMqSession:
 class Aio_Redis():
 
     async def __aenter__(self):
-        self.r = await aioredis.create_redis(('39.106.110.169', 6379),password='liuchao',encoding='utf-8')
+        self.r = await aioredis.create_redis((DB['redis']['host'], DB['redis']['port']),password=DB['redis']['password'],encoding='utf-8')
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):

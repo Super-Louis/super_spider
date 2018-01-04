@@ -25,7 +25,7 @@ class CrawlerProxy():
         self.mq = await AsyncMqSession()
         while True:
             size = await self.queue_size()
-            if size < 1000:
+            if size < 3000:
                 l.info("Proxies are not enough. Get and check proxies...")
                 proxy_list = []
                 try:
@@ -35,33 +35,15 @@ class CrawlerProxy():
                         proxy_ip = "http://" + p.strip()
                         # proxy_ips = "https://" + p.strip()
                         proxy = proxy_ip
-                        if self.debug:
-                            l.info("get proxy:{}".format(proxy))
-                        proxy_list.append(proxy)
-                    tasks = [self.check_proxy(p) for p in proxy_list]
-                    await asyncio.gather(*tasks)
+
+                        await self.mq.put(queue='proxy_queue', body=proxy)
                 except Exception as e:
                     l.info(e)
                     pass
             else:
                 l.info("Proxies are enough. Get proxy directly...")
-                await asyncio.sleep(5)
+                await asyncio.sleep(2)
                 pass
-
-    async def check_proxy(self,ip):
-        url = 'http://myip.ipip.net/'
-        try:
-            res = await self.session.get(url, proxy=ip, timeout=1)
-            response = await res.text()
-            if '阿里云' not in response:
-                # self.l.info(response)
-                self.count += 1
-                l.info("{} is ok".format(ip))
-                l.info("count {}".format(self.count))
-                await self.mq.put(queue='proxy_queue', body=ip)
-
-        except Exception as e:
-            l.info("{} is not valid: {}".format(ip,e))
 
     async def queue_size(self):
         try:
@@ -79,9 +61,8 @@ class CrawlerProxy():
         loop.run_until_complete(self.get_proxies())
         loop.close()
 
-
-
 if __name__ == '__main__':
     # mq = MqSession()
     cp = CrawlerProxy(debug=False)
     cp.run()
+
