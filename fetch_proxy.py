@@ -29,7 +29,7 @@ class CrawlerProxy():
                 l.info("Proxies are not enough. Get and check proxies...")
                 proxy_list = []
                 try:
-                    res = requests.get("http://proxy.eindex.me/")
+                    res = requests.get("http://eindex:proxy@proxy.eindex.me")
                     for p in res.text.split("\n"):
                         proxy_ip = "http://" + p.strip()
                         # proxy_ips = "https://" + p.strip()
