@@ -66,12 +66,12 @@ class Url_Producer:
             tag, ip = await self.proxy_mq.get('proxy_queue')
             try:
                 if data:
-                    async with self.session.post(url, data=data, headers=headers,proxy=ip.decode('utf-8')) as response:
+                    async with self.session.post(url, data=data, headers=headers,proxy=ip.decode('utf-8'),timeout=10) as response:
                         # l.info("proxy:{} is valid".format(ip))
                         await self.proxy_mq.put('proxy_queue',ip)
                         return await response.json()
                 if params:
-                    async with self.session.get(url, params=params, headers=headers,proxy=ip.decode('utf-8')) as response:
+                    async with self.session.get(url, params=params, headers=headers,proxy=ip.decode('utf-8'),timeout=10) as response:
                         # l.info("proxy:{} is valid".format(ip))
                         await self.proxy_mq.put('proxy_queue',ip)
                         return await response.json()
@@ -151,7 +151,7 @@ class Url_Producer:
                 l.info("process check id: {}".format(id))
                 redis_len = await self.redis.scard('user_id')
                 print("length of id is:{}".format(redis_len))
-                if redis_len <= 100000:
+                if redis_len <= 10000:
                     # todo:去重
                     if await self.bf.isContains(id):  # 判断字符串是否存在
                         l.info('{} exists!'.format(id))
