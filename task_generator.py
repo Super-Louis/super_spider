@@ -70,12 +70,12 @@ class Url_Producer:
             tag, ip = await self.proxy_mq.get('proxy_queue')
             try:
                 if data:
-                    async with self.session.post(url, data=data, headers=headers,proxy=ip.decode('utf-8'),timeout=3) as response:
+                    async with self.session.post(url, data=data, headers=headers,proxy=ip.decode('utf-8'),timeout=10) as response:
                         # logging.info("proxy:{} is valid".format(ip))
                         await self.proxy_mq.put('proxy_queue',ip)
                         return await response.json()
                 if params:
-                    async with self.session.get(url, params=params, headers=headers,proxy=ip.decode('utf-8'),timeout=3) as response:
+                    async with self.session.get(url, params=params, headers=headers,proxy=ip.decode('utf-8'),timeout=10) as response:
                         # logging.info("proxy:{} is valid".format(ip))
                         await self.proxy_mq.put('proxy_queue',ip)
                         return await response.json()
@@ -179,7 +179,7 @@ class Url_Producer:
 
     def worker(self):
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.crawler_entry(id='3152875614'))
+        loop.run_until_complete(self.crawler_entry(id='2201570790'))
         loop.close()
 
     # def run(self):

@@ -70,10 +70,11 @@ class Url_Consumer:
                     async with self.session.get(url,headers=headers,proxy=ip.decode('utf-8'),timeout=10) as response:
                         # logging.info("proxy:{} is valid".format(ip))
                         await self.proxy_mq.put('proxy_queue',ip)
-
+                        #print(await response.text())
                         return await response.json()
             except Exception as e:
                 l.info(e)
+                await asyncio.sleep(3)
                 # l.info("proxy:{} is not valid".format(ip))
                 continue
 
@@ -134,7 +135,7 @@ class Url_Consumer:
         self.mq = await AsyncMqSession()
         self.proxy_mq = await AsyncMqSession()
         while True:
-            tasks = [self.get_details() for _ in range(1000)]
+            tasks = [self.get_details() for _ in range(500)]
             print(len(tasks))
             await asyncio.gather(*tasks)
 

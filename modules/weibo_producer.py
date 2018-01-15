@@ -77,6 +77,7 @@ class Url_Producer:
                         return await response.json()
             except Exception as e:
                 l.info(e)
+                await asyncio.sleep(3)
                 # l.info("proxy:{} is not valid".format(ip))
                 continue
 
@@ -166,7 +167,7 @@ class Url_Producer:
         self.redis = await aioredis.create_redis((DB['redis']['host'], DB['redis']['port']),password=DB['redis']['password'],encoding='utf-8')
         while True:
 
-            tasks = [self.crawler_entry() for _ in range(1000)]
+            tasks = [self.crawler_entry() for _ in range(500)]
             try:
                 await asyncio.gather(*tasks)
             except Exception as e:
