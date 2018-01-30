@@ -179,7 +179,7 @@ class Url_Producer:
 
     def worker(self):
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.crawler_entry(id='2201570790'))
+        loop.run_until_complete(self.crawler_entry(id='1977331684'))
         loop.close()
 
     # def run(self):
