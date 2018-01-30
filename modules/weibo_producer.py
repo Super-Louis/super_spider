@@ -142,24 +142,30 @@ class Url_Producer:
         if cards:
             if page != 1:
                 follow_ids = cards[0]['card_group']
-                id_list = [str(i['user']['id']) for i in follow_ids]
+                # id_list = [str(i['user']['id']) for i in follow_ids]
+                for i in follow_ids:
+                    await self.insert_redis(str(i['user']['id']))
             else:
                 for card in cards:
                     if 'title' in card.keys():
-                        id_list = [str(i['user']['id']) for i in card['card_group']]
+                        # id_list = [str(i['user']['id']) for i in card['card_group']]
+                        for i in card['card_group']:
+                            await self.insert_redis(str(i['user']['id']))
                         break
-            for id in id_list:
-                l.info("process check id: {}".format(id))
-                redis_len = await self.redis.scard('user_id')
-                print("length of id is:{}".format(redis_len))
-                if redis_len <= 10000:
-                    # todo:去重
-                    if await self.bf.isContains(id):  # 判断字符串是否存在
-                        l.info('{} exists!'.format(id))
-                    else:
-                        l.info('{} not exists, insert into redis!'.format(id))
-                        await self.bf.insert(id)
-                        await self.redis.sadd('user_id', str(id))
+
+
+    async def insert_redis(self, id):
+        l.info("process check id: {}".format(id))
+        redis_len = await self.redis.scard('user_id')
+        print("length of id is:{}".format(redis_len))
+        if redis_len <= 10000:  # 限制id数量，防止内存占满
+            # todo:去重
+            if await self.bf.isContains(id):  # 判断字符串是否存在
+                l.info('{} exists!'.format(id))
+            else:
+                l.info('{} not exists, insert into redis!'.format(id))
+                await self.bf.insert(id)
+                await self.redis.sadd('user_id', str(id))
 
     async def tasks(self):
         self.mq = await AsyncMqSession()
