@@ -53,6 +53,9 @@ class Url_Consumer:
     async def request_page(self,url,data=None,params=None,headers=None,proxy=False):
         retry = 0
         while True:
+            retry += 1
+            if retry == 30:
+                return None
             tag, ip = await self.proxy_mq.get('proxy_queue')
             try:
                 if data:
@@ -84,32 +87,33 @@ class Url_Consumer:
         url = url.decode('utf-8')
         l.info("get url {}".format(url))
         res = await self.request_page(url=url,headers=headers)
-        res = await self.build_profile(res)
-        additional_info = {
-            'id': self.check_exists(res, 'id'),
-            'tag': self.check_exists(res, '标签'),
-            'lacation': self.check_exists(res,'所在地'),
-            'company': self.check_exists(res,'公司'),
-            'email': self.check_exists(res,'邮箱'),
-            "blog": self.check_exists(res,'博客'),
-            'level': self.check_exists(res,'等级'),
-            'credit': self.check_exists(res,'阳光信用'),
-            'register_time':self.check_exists(res,'注册时间')
-        }
-        try:
-            await self.collection.find_one_and_update({"id":res['id']},
-                                                      {"$set":{'tag':additional_info['tag'],
-                                                      'lacation':additional_info['lacation'],
-                                                      'company':additional_info['company'],
-                                                      'email':additional_info['email'],
-                                                      "blog":additional_info['blog'],
-                                                      'level':additional_info['level'],
-                                                      'credit': additional_info['credit'],
-                                                      'register_time':additional_info['register_time']}})
-            l.info("update information of url:{} to mongo".format(url))
-        except Exception as e:
-            l.info(e)
-            pass
+        if res:
+            res = await self.build_profile(res)
+            additional_info = {
+                'id': self.check_exists(res, 'id'),
+                'tag': self.check_exists(res, '标签'),
+                'lacation': self.check_exists(res,'所在地'),
+                'company': self.check_exists(res,'公司'),
+                'email': self.check_exists(res,'邮箱'),
+                "blog": self.check_exists(res,'博客'),
+                'level': self.check_exists(res,'等级'),
+                'credit': self.check_exists(res,'阳光信用'),
+                'register_time':self.check_exists(res,'注册时间')
+            }
+            try:
+                await self.collection.find_one_and_update({"id":res['id']},
+                                                          {"$set":{'tag':additional_info['tag'],
+                                                          'lacation':additional_info['lacation'],
+                                                          'company':additional_info['company'],
+                                                          'email':additional_info['email'],
+                                                          "blog":additional_info['blog'],
+                                                          'level':additional_info['level'],
+                                                          'credit': additional_info['credit'],
+                                                          'register_time':additional_info['register_time']}})
+                l.info("update information of url:{} to mongo".format(url))
+            except Exception as e:
+                l.info(e)
+                pass
 
     async def build_profile(self,p):
         profile = dict()

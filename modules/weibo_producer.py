@@ -63,6 +63,9 @@ class Url_Producer:
                     continue
         retry = 0
         while True:
+            retry += 1
+            if retry == 30:
+                return None
             tag, ip = await self.proxy_mq.get('proxy_queue')
             try:
                 if data:
@@ -138,20 +141,25 @@ class Url_Producer:
 
         params['page'] = str(page)
         follow_res = await self.request_page(url=basic_info_url, params=params, headers=headers,proxy=True)
-        cards = follow_res['data']['cards']
-        if cards:
-            if page != 1:
-                follow_ids = cards[0]['card_group']
-                # id_list = [str(i['user']['id']) for i in follow_ids]
-                for i in follow_ids:
-                    await self.insert_redis(str(i['user']['id']))
-            else:
-                for card in cards:
-                    if 'title' in card.keys():
-                        # id_list = [str(i['user']['id']) for i in card['card_group']]
-                        for i in card['card_group']:
-                            await self.insert_redis(str(i['user']['id']))
-                        break
+        try:
+            cards = follow_res['data']['cards']
+        except Exception as e:
+            l.info(e)
+            pass
+        else:
+            if cards:
+                if page != 1:
+                    follow_ids = cards[0]['card_group']
+                    # id_list = [str(i['user']['id']) for i in follow_ids]
+                    for i in follow_ids:
+                        await self.insert_redis(str(i['user']['id']))
+                else:
+                    for card in cards:
+                        if 'title' in card.keys():
+                            # id_list = [str(i['user']['id']) for i in card['card_group']]
+                            for i in card['card_group']:
+                                await self.insert_redis(str(i['user']['id']))
+                            break
 
 
     async def insert_redis(self, id):

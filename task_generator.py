@@ -143,28 +143,32 @@ class Url_Producer:
 
         params['page'] = str(page)
         follow_res = await self.request_page(url=basic_info_url, params=params, headers=headers,proxy=True)
-        cards = follow_res['data']['cards']
-        if cards:
-            if page != 1:
-                follow_ids = cards[0]['card_group']
-                id_list = [str(i['user']['id']) for i in follow_ids]
-            else:
-                for card in cards:
-                    if 'title' in card.keys():
-                        id_list = [str(i['user']['id']) for i in card['card_group']]
-                        break
-            for id in id_list:
-                logging.info("process check id: {}".format(id))
-                redis_len = await self.redis.scard('user_id')
-                print("length of id is:{}".format(redis_len))
-                if redis_len <= 20000:
-                    # todo:去重
-                    if await self.bf.isContains(id):  # 判断字符串是否存在
-                        logging.info('{} exists!'.format(id))
-                    else:
-                        logging.info('{} not exists, insert into redis!'.format(id))
-                        await self.bf.insert(id)
-                        await self.redis.sadd('user_id', str(id))
+        try:
+            cards = follow_res['data']['cards']
+        except Exception as e:
+            l.info(e)
+        else:
+            if cards:
+                if page != 1:
+                    follow_ids = cards[0]['card_group']
+                    id_list = [str(i['user']['id']) for i in follow_ids]
+                else:
+                    for card in cards:
+                        if 'title' in card.keys():
+                            id_list = [str(i['user']['id']) for i in card['card_group']]
+                            break
+                for id in id_list:
+                    logging.info("process check id: {}".format(id))
+                    redis_len = await self.redis.scard('user_id')
+                    print("length of id is:{}".format(redis_len))
+                    if redis_len <= 20000:
+                        # todo:去重
+                        if await self.bf.isContains(id):  # 判断字符串是否存在
+                            logging.info('{} exists!'.format(id))
+                        else:
+                            logging.info('{} not exists, insert into redis!'.format(id))
+                            await self.bf.insert(id)
+                            await self.redis.sadd('user_id', str(id))
 
     # async def tasks(self):
     #     self.mq = await AsyncMqSession()

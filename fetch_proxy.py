@@ -27,7 +27,7 @@ class CrawlerProxy():
             size = await self.queue_size()
             if size < 3000:
                 l.info("Proxies are not enough. Get and check proxies...")
-                proxy_list = []
+                # proxy_list = []
                 try:
                     res = requests.get("http://eindex:proxy@proxy.eindex.me")
                     for p in res.text.split("\n"):
