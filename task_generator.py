@@ -12,6 +12,7 @@ from logging.handlers import TimedRotatingFileHandler
 import multiprocessing
 from spider_queue import *
 from db_config import DB
+import sys
 
 basic_info_url = 'https://m.weibo.cn/api/container/getIndex'
 logging.basicConfig(level=logging.INFO,
@@ -67,7 +68,9 @@ class Url_Producer:
             retry += 1
             if retry == 31:
                 return ''
+            # print('aaa')
             tag, ip = await self.proxy_mq.get('proxy_queue')
+            # print("aaa")
             try:
                 if data:
                     async with self.session.post(url, data=data, headers=headers,proxy=ip.decode('utf-8'),timeout=10) as response:
@@ -97,7 +100,6 @@ class Url_Producer:
                 }
         basic_res = await self.request_page(url=basic_info_url,params=info_params,headers=headers,proxy=True)
         # print(basic_res)
-
         try:
             logging.info("process inserting id:{} into mongodb".format(id))
             await self.collection.insert_one(basic_res['data']['userInfo'])
@@ -122,7 +124,6 @@ class Url_Producer:
                 'value':id
             }
             detail_url = basic_info_url + "?" + urllib.parse.urlencode(detail_params)
-            print(detail_url)
             await self.mq.put('info_url',detail_url)
 
             follow_params = {
@@ -160,8 +161,8 @@ class Url_Producer:
                 for id in id_list:
                     logging.info("process check id: {}".format(id))
                     redis_len = await self.redis.scard('user_id')
-                    print("length of id is:{}".format(redis_len))
-                    if redis_len <= 20000:
+                    l.info("length of id is:{}".format(redis_len))
+                    if redis_len <= 100:
                         # todo:去重
                         if await self.bf.isContains(id):  # 判断字符串是否存在
                             logging.info('{} exists!'.format(id))
@@ -169,21 +170,26 @@ class Url_Producer:
                             logging.info('{} not exists, insert into redis!'.format(id))
                             await self.bf.insert(id)
                             await self.redis.sadd('user_id', str(id))
+                    else:
+                        logging.info("id is enough, exit")
+                        raise RuntimeError('id is enough')
+
 
     # async def tasks(self):
     #     self.mq = await AsyncMqSession()
     #     self.proxy_mq = await AsyncMqSession()
     #     self.redis = await aioredis.create_redis(('39.106.110.169', 6379),password='liuchao',encoding='utf-8')
-    #     while True:
-    #         tasks = [self.crawler_entry() for _ in range(1000)]
-    #         try:
-    #             await asyncio.gather(*tasks)
-    #         except Exception as e:
-    #             logging.info(e)
+    #     traversed_id = int(await self.redis.get('traversal_id'))
+    #     tasks = [self.crawler_entry(id) for id in range(traversed_id,traversed_id+10000)]
+    #     try:
+    #         await asyncio.gather(*tasks)
+    #     except Exception as e:
+    #         logging.info(e)
 
-    def worker(self):
+
+    def worker(self, id):
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.crawler_entry(id='1977331684'))
+        loop.run_until_complete(self.crawler_entry(id))
         loop.close()
 
     # def run(self):
@@ -213,5 +219,5 @@ class Url_Producer:
 
 if __name__ == '__main__':
     with Url_Producer() as up:
-        up.worker()
+        up.worker('1111111111')
 

@@ -165,7 +165,7 @@ class Url_Producer:
     async def insert_redis(self, id):
         l.info("process check id: {}".format(id))
         redis_len = await self.redis.scard('user_id')
-        print("length of id is:{}".format(redis_len))
+        l.info("length of id is:{}".format(redis_len))
         if redis_len <= 10000:  # 限制id数量，防止内存占满
             # todo:去重
             if await self.bf.isContains(id):  # 判断字符串是否存在

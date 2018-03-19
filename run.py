@@ -4,13 +4,19 @@ from logging.handlers import TimedRotatingFileHandler
 import multiprocessing
 from modules import Url_Producer, Url_Consumer
 from fetch_proxy import CrawlerProxy
+from db_config import DB
+import redis
+from task_generator import Url_Producer as Gup
+import time
+
 
 class Run():
 
     def __init__(self,crawler):
         self.crawler = crawler
         self.logger = self.init_logger()
-
+        self.redis = redis.Redis(host=DB['redis']['host'], port=DB['redis']['port'], password=DB['redis']['password'], decode_responses=True)
+        self.gup = Gup()
 
     def init_logger(self):
         logger = logging.getLogger('run')  # 创建一个logger
@@ -36,8 +42,26 @@ class Run():
         logger.addHandler(ch)
         return logger
 
+    def generate_ids(self):
+        l = self.logger
+        while True:
+            redis_len = self.redis.scard('user_id')
+            if redis_len < 100:
+                l.info("id set is not enough, generate task...")
+                try:
+                    traversal_id = int(self.redis.get('traversal_id'))
+                    traversal_id += 1
+                    l.info("current traversal is is {}".format(traversal_id))
+                    self.gup.worker(str(traversal_id))
+                    self.redis.set('traversal_id', str(traversal_id))
+                except RuntimeError as e:
+                    l.info(e)
+            else:
+                time.sleep(3600)
+
+
     def run(self):
-        task_list = [CrawlerProxy().run,Url_Producer().run, Url_Consumer().run]
+        task_list = [self.generate_ids, CrawlerProxy().run, Url_Producer().run, Url_Consumer().run]
         ps = []
         for t in task_list:
             p = multiprocessing.Process(target=t,args=())
