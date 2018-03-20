@@ -120,7 +120,6 @@ class Url_Producer:
                     'value':id
                 }
                 detail_url = basic_info_url + "?" + urllib.parse.urlencode(detail_params)
-                print(detail_url)
                 await self.mq.put('info_url',detail_url)
 
                 follow_params = {
