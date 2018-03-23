@@ -190,16 +190,7 @@ class Url_Producer():
     def worker(self, id):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.crawler_entry(id))
-        loop.close()
-
-    # def run(self):
-    #     ps = list()
-    #     for i in range(3):
-    #         p = multiprocessing.Process(target=self.worker, args=())
-    #         ps.append(p)
-    #         p.start()
-    #     for p in ps:
-    #         p.join()
+        # loop.close()
 
 
     def __exit__(self, exc_type, exc_val, exc_tb):
