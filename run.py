@@ -7,7 +7,7 @@ from fetch_proxy import CrawlerProxy
 from db_config import DB
 import redis
 from task_generator import Url_Producer as Gup
-import time
+import time, random
 
 
 class Run():
@@ -50,13 +50,13 @@ class Run():
                 l.info("id set is not enough, generate task...")
                 try:
                     traversal_id = int(self.redis.get('traversal_id'))
-                    traversal_id += 1
                     l.info("current traversal is is {}".format(traversal_id))
                     self.gup.worker(str(traversal_id))
+                    traversal_id += 1000
                     self.redis.set('traversal_id', str(traversal_id))
                 except RuntimeError as e:
                     l.info(e)
-                    time.sleep(5)
+                    time.sleep(random.uniform(1,3))
             else:
                 time.sleep(1800)
 

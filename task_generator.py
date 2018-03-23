@@ -43,7 +43,7 @@ class Url_Producer():
     def session(self):
         if self._session is None:
             conn = aiohttp.TCPConnector(verify_ssl=False,
-                                        limit=100,  # 连接池不能太大
+                                        limit=1000,  # 连接池不能太大
                                         use_dns_cache=True)
             self._session = aiohttp.ClientSession(connector=conn)
         return self._session
@@ -66,7 +66,7 @@ class Url_Producer():
         retry = 0
         while True:
             retry += 1
-            if retry == 31:
+            if retry == 11:
                 return ''
             # print('aaa')
             tag, ip = await self.proxy_mq.get('proxy_queue')
@@ -90,9 +90,7 @@ class Url_Producer():
 
     async def crawler_entry(self,id=None):#初始从Task_Gernator中随机选取一个种子用户
         # id = await self.redis.spop('user_id')
-        self.mq = await AsyncMqSession()
-        self.proxy_mq = await AsyncMqSession()
-        self.redis = await aioredis.create_redis((DB['redis']['host'], DB['redis']['port']),password=DB['redis']['password'],encoding='utf-8')
+
         logging.info("get id:{}".format(id))
         info_params = {
                 'type':'uid',
@@ -139,6 +137,8 @@ class Url_Producer():
                 max_page = 10
             for page in range(1,max_page):
                 await self.get_user_list(params=follow_params,page=page)
+            # tasks = [self.get_user_list(params=follow_params,page=page) for page in range(1,max_page)]
+            # await asyncio.gather(*tasks)
 
     async def get_user_list(self,params,page):#不能同时搜索多个page!
 
@@ -185,11 +185,18 @@ class Url_Producer():
     #         await asyncio.gather(*tasks)
     #     except Exception as e:
     #         logging.info(e)
-
+    async def task(self, id):
+        id = int(id)
+        self.mq = await AsyncMqSession()
+        self.proxy_mq = await AsyncMqSession()
+        self.redis = await aioredis.create_redis((DB['redis']['host'], DB['redis']['port']),
+                                                 password=DB['redis']['password'], encoding='utf-8')
+        tasks = [self.crawler_entry(str(id_)) for id_ in range(id, id+1000)]
+        await asyncio.gather(*tasks)
 
     def worker(self, id):
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.crawler_entry(id))
+        loop.run_until_complete(self.task(id))
         # loop.close()
 
 
