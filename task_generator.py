@@ -29,7 +29,7 @@ headers = {
         }
 
 
-class Url_Producer:
+class Url_Producer():
     def __init__(self):
         self._session = None
         self.client = motor.motor_asyncio.AsyncIOMotorClient(f"mongodb://{DB['mongo']['user']}:{DB['mongo']['password']}@{DB['mongo']['host']}:{DB['mongo']['port']}")
@@ -147,7 +147,7 @@ class Url_Producer:
         try:
             cards = follow_res['data']['cards']
         except Exception as e:
-            l.info(e)
+            logging.info(e)
         else:
             if cards:
                 if page != 1:
@@ -161,7 +161,7 @@ class Url_Producer:
                 for id in id_list:
                     logging.info("process check id: {}".format(id))
                     redis_len = await self.redis.scard('user_id')
-                    l.info("length of id is:{}".format(redis_len))
+                    logging.info("length of id is:{}".format(redis_len))
                     if redis_len <= 100:
                         # todo:去重
                         if await self.bf.isContains(id):  # 判断字符串是否存在

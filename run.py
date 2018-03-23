@@ -56,8 +56,9 @@ class Run():
                     self.redis.set('traversal_id', str(traversal_id))
                 except RuntimeError as e:
                     l.info(e)
+                    time.sleep(5)
             else:
-                time.sleep(3600)
+                time.sleep(1800)
 
 
     def run(self):
