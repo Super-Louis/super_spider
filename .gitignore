@@ -1,2 +1,2 @@
 modules/logs/*
-.db_config.py
+db_config.py
