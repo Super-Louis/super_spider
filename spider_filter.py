@@ -57,11 +57,16 @@ class BloomFilter(object):
                 loc = f.hash(str_input)
                 await ar.r.setbit(name, loc, 1)
 
-    def run(self,string):
+    def run_contain(self,string):
         loop = asyncio.get_event_loop()
         result = loop.run_until_complete(self.isContains(string))
         loop.close()
         print(result)
+
+    def run_insert(self,string):
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.insert(string))
+        loop.close()
 
 
 if __name__ == '__main__':
@@ -69,7 +74,8 @@ if __name__ == '__main__':
     """ 第一次运行时会显示 not exists!，之后再运行会显示 exists! """
 
     bf = BloomFilter()
-    bf.run('2247657845')
+    bf.run_contain('啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊')
+    # bf.run_insert('啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊')
     # if bf.isContains('2247657845'):   # 判断字符串是否存在
     #     print('exists!')
     # else:

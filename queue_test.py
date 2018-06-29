@@ -136,13 +136,13 @@ class testQueue():
 
     async def doSomething(self,message, tag):
         await asyncio.sleep(5)
-        await self.mq.nack(tag)
-        print('nack:{}, message:{}'.format(tag, message))
+        await self.mq.ack(tag)
+        print('ack:{}, message:{}'.format(tag, message))
 
 
     async def tasks(self):
         self.mq = await AsyncMqSession()
-        tasks = [self.get_message() for _ in range(5)]
+        tasks = [self.get_message() for _ in range(2)]
         await asyncio.gather(*tasks)
 
     def run(self):
